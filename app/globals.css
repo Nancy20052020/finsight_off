@@ -188,7 +188,8 @@ button, input, select { font: inherit; color: inherit; }
   padding: 20px 16px; border-right: 1px solid var(--line); background: var(--bg-2);
 }
 .rail { display: flex; flex-direction: column; }
-.rail-action { margin-top: auto; width: 100%; }
+.rail-actions { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+.rail-actions .button { width: 100%; }
 .insight { border-right: 0; border-left: 1px solid var(--line); }
 .rail nav { display: flex; flex-direction: column; gap: 4px; margin-top: 28px; }
 .rail nav a { text-decoration: none; color: var(--muted); padding: 10px 12px; border-radius: 10px; font-weight: 700; font-size: 14px; }
@@ -278,6 +279,28 @@ footer { margin-top: 36px; padding-top: 14px; border-top: 1px solid var(--line);
 .drop.ready .status { color: var(--good); }
 .drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 
+.data-studio { min-height: 100vh; }
+.data-pick, .data-sheet { width: min(1080px, calc(100% - 40px)); margin: 0 auto; padding: 8px 0 64px; }
+.data-pick h1, .data-sheet h1 { margin: 0 0 10px; font-size: clamp(36px, 5vw, 60px); line-height: 1; max-width: 16ch; }
+.data-pick p, .data-sheet-head p { color: var(--muted); max-width: 46ch; }
+.data-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 28px; }
+.data-card {
+  text-align: left; cursor: pointer; border: 1px solid var(--line); background: var(--card);
+  border-radius: 22px; padding: 22px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px;
+}
+.data-card:hover { border-color: var(--blue); }
+.data-card .status { color: var(--blue); font-size: 13px; font-weight: 800; letter-spacing: 0.08em; }
+.data-card strong { font-size: 28px; letter-spacing: -0.03em; }
+.data-card span:last-child { color: var(--muted); }
+.data-sheet-head { display: flex; justify-content: space-between; gap: 16px; align-items: end; margin-bottom: 14px; }
+.text-button { border: 0; background: transparent; color: var(--blue); font-weight: 750; padding: 0 0 8px; cursor: pointer; }
+.table-wrap { background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: auto; max-height: calc(100vh - 220px); }
+.table-wrap table { margin: 0; }
+.table-wrap thead th { position: sticky; top: 0; background: var(--card); }
+.table-wrap td.in { color: var(--good); }
+.open-row { background: var(--warn-bg); }
+.open-row td:last-child { color: var(--warn); font-weight: 750; }
+
 html[lang="hi"] .eyebrow,
 html[lang="zh-Hans"] .eyebrow,
 html[lang="hi"] .kicker,
@@ -296,7 +319,8 @@ html[lang="zh-Hans"] .stage-copy h1 { max-width: 18ch; line-height: 1.15; }
   .shell { grid-template-columns: 1fr; }
   .rail, .insight { position: relative; height: auto; border: 0; }
   .rail { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); }
-  .rail-action { margin-top: 0; width: auto; }
+  .rail-actions { margin-top: 0; flex-direction: row; width: auto; }
+  .rail-actions .button { width: auto; }
   .studio-grid { grid-template-columns: 1fr; gap: 28px; }
   .rail nav { flex-direction: row; flex-wrap: wrap; margin-top: 0; }
   .stage-grid, .strip, .bento, .controls, .split, .drops, .metrics, .metrics.three { grid-template-columns: 1fr 1fr; }
@@ -307,6 +331,7 @@ html[lang="zh-Hans"] .stage-copy h1 { max-width: 18ch; line-height: 1.15; }
   .stage-grid, .strip, .bento, .controls, .split, .drops, .metrics, .metrics.three, .section-head, .close-band, .top { grid-template-columns: 1fr; display: grid; }
   .section-head, .close-band, .top { display: flex; flex-direction: column; align-items: flex-start; }
   .nav-links a:not(.button) { display: none; }
-  .stage-copy h1, .studio-copy h1 { font-size: 42px; max-width: 16ch; }
+  .stage-copy h1, .studio-copy h1, .data-pick h1 { font-size: 42px; max-width: 16ch; }
+  .data-cards, .data-sheet-head { grid-template-columns: 1fr; display: flex; flex-direction: column; align-items: flex-start; }
   .page, .strip, .bento, .preview, .close-band, .try-panel, .topnav, .stage-grid { width: min(100% - 20px, 1160px); }
 }
