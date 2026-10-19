@@ -1,0 +1,5 @@
+invoice_id,customer,amount,issue_date,due_date,paid_date
+BR-101,Brightline Studio,19000,2025-10-08,2025-10-22,2025-11-14
+BR-102,Brightline Studio,19000,2025-11-08,2025-11-22,2025-12-14
+BR-103,Brightline Studio,19000,2025-12-08,2025-12-22,2026-01-14
+BR-109,Brightline Studio,20000,2026-02-18,2026-03-10,

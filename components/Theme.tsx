@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
+import { useI18n } from "@/lib/i18n";
+
 type ThemeName = "dark" | "light";
 
 const ThemeContext = createContext<{ theme: ThemeName; toggle: () => void }>({
@@ -10,10 +12,11 @@ const ThemeContext = createContext<{ theme: ThemeName; toggle: () => void }>({
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<ThemeName>("dark");
+  const [theme, setTheme] = useState<ThemeName>("light");
 
   useEffect(() => {
-    setTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
+    const current = document.documentElement.dataset.theme;
+    if (current === "dark" || current === "light") setTheme(current);
   }, []);
 
   function toggle() {
@@ -32,9 +35,10 @@ export function useTheme() {
 
 export function ThemeToggle() {
   const { theme, toggle } = useTheme();
-  const next = theme === "dark" ? "Light" : "Dark";
+  const { t } = useI18n();
+  const next = theme === "dark" ? t("themeToLight") : t("themeToDark");
   return (
-    <button type="button" className="theme-toggle" onClick={toggle} aria-label={`Switch to ${next.toLowerCase()} mode`}>
+    <button type="button" className="theme-toggle" onClick={toggle} aria-label={next}>
       <span className={theme === "dark" ? "theme-dot on" : "theme-dot"} />
       {next}
     </button>

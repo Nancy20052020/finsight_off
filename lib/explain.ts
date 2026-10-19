@@ -41,7 +41,9 @@ export function crossingItem(result: ForecastResult): Story["crossing"] {
   return culprit;
 }
 
-export function unusualExpenses(transactions: Transaction[], asOf: string): string[] {
+export type SpendSpike = { category: string; recent: number; mean: number; score: number | null };
+
+export function spendSpikes(transactions: Transaction[], asOf: string): SpendSpike[] {
   const rows = transactions.filter((row) => row.amount < 0 && !USUAL_EXPENSES.has(row.category));
   const byCategory = new Map<string, Transaction[]>();
   for (const row of rows) {
@@ -49,7 +51,7 @@ export function unusualExpenses(transactions: Transaction[], asOf: string): stri
     list.push(row);
     byCategory.set(row.category, list);
   }
-  const notes: string[] = [];
+  const spikes: SpendSpike[] = [];
   for (const category of [...byCategory.keys()].sort()) {
     const group = byCategory.get(category) ?? [];
     const windowTotal = (end: string) => {
@@ -71,22 +73,24 @@ export function unusualExpenses(transactions: Transaction[], asOf: string): stri
     const mean = prior.reduce((sum, value) => sum + value, 0) / prior.length;
     if (spread === 0) {
       if (recent <= mean * 1.5) continue;
-      notes.push(
-        `${category} spending over the last 30 days is ${money(recent)}, ` +
-          `against a prior 30-day average of ${money(mean)} that did not vary.`,
-      );
+      spikes.push({ category, recent, mean, score: null });
       continue;
     }
     const score = (recent - mean) / spread;
-    if (score > 2) {
-      notes.push(
-        `${category} spending over the last 30 days is ${money(recent)}, ` +
-          `which is ${oneDecimal(score)} standard deviations above the prior 30-day average ` +
-          `of ${money(mean)}.`,
-      );
-    }
+    if (score > 2) spikes.push({ category, recent, mean, score });
   }
-  return notes;
+  return spikes;
+}
+
+export function unusualExpenses(transactions: Transaction[], asOf: string): string[] {
+  return spendSpikes(transactions, asOf).map((spike) =>
+    spike.score === null
+      ? `${spike.category} spending over the last 30 days is ${money(spike.recent)}, ` +
+        `against a prior 30-day average of ${money(spike.mean)} that did not vary.`
+      : `${spike.category} spending over the last 30 days is ${money(spike.recent)}, ` +
+        `which is ${oneDecimal(spike.score)} standard deviations above the prior 30-day average ` +
+        `of ${money(spike.mean)}.`,
+  );
 }
 
 export function explain(result: ForecastResult, transactions: Transaction[]): Story {
