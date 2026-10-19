@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Dashboard } from "@/components/Dashboard";
+import { DataSheet } from "@/components/DataSheet";
 import { ThemeToggle } from "@/components/Theme";
 import { booksFromPair } from "@/lib/bank";
 import { LanguageSwitch, useI18n } from "@/lib/i18n";
@@ -16,6 +17,7 @@ export function TryApp() {
   const [bankFile, setBankFile] = useState<File | null>(null);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [books, setBooks] = useState<Books | null>(null);
+  const [showData, setShowData] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function takeBank(file: File | undefined) {
@@ -52,14 +54,20 @@ export function TryApp() {
     }
   }
 
+  if (books && bankFile && showData) {
+    return <DataSheet books={books} kind="upload" onClose={() => setShowData(false)} />;
+  }
+
   if (books && bankFile) {
     return (
       <Dashboard
         key={`${books.meta.as_of}-${books.transactions.length}-${books.invoices.length}`}
         books={books}
         note={t("footerUpload", { company: books.meta.company, file: bankFile.name })}
+        onShowData={() => setShowData(true)}
         onChangeFiles={() => {
           setBooks(null);
+          setShowData(false);
           setError(null);
         }}
       />
