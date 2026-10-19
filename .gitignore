@@ -4,3 +4,8 @@ __pycache__/
 .pytest_cache/
 .streamlit/secrets.toml
 .DS_Store
+node_modules/
+.next/
+.vercel/
+out/
+*.tsbuildinfo
