@@ -26,10 +26,12 @@ export function Dashboard({
   books,
   note,
   onChangeFiles,
+  onShowData,
 }: {
   books: Books;
   note?: string;
   onChangeFiles?: () => void;
+  onShowData?: () => void;
 }) {
   const { t, cat } = useI18n();
   const { theme } = useTheme();
@@ -210,15 +212,22 @@ export function Dashboard({
         </nav>
         <LanguageSwitch />
         <ThemeToggle />
-        {onChangeFiles ? (
-          <button type="button" className="button ghost rail-action" onClick={onChangeFiles}>
-            {t("changeFiles")}
-          </button>
-        ) : (
-          <Link href="/try" className="button rail-action">
-            {t("try")}
-          </Link>
-        )}
+        <div className="rail-actions">
+          {onShowData ? (
+            <button type="button" className="button ghost" onClick={onShowData}>
+              {t("seeData")}
+            </button>
+          ) : null}
+          {onChangeFiles ? (
+            <button type="button" className="button ghost" onClick={onChangeFiles}>
+              {t("changeFiles")}
+            </button>
+          ) : (
+            <Link href="/try" className="button">
+              {t("try")}
+            </Link>
+          )}
+        </div>
       </aside>
       <div className="shell-main">
         <div className="page">
