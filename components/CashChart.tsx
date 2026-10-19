@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type PointerEvent } from "react";
+import { useId, useMemo, useState, type PointerEvent } from "react";
 
 import { monthDayLabel, parseDay } from "@/lib/dates";
 import { money } from "@/lib/format";
@@ -21,11 +21,10 @@ type CashChartProps = {
   band?: { name: string; color: string; low: ChartPoint[]; high: ChartPoint[] };
   marker?: { date: string; label: string } | null;
   ariaLabel: string;
+  compact?: boolean;
 };
 
-const WIDTH = 860;
-const HEIGHT = 420;
-const PAD = { l: 64, r: 16, t: 18, b: 36 };
+const PAD = { l: 56, r: 18, t: 22, b: 32 };
 
 function compactMoney(value: number): string {
   const sign = value < 0 ? "-" : "";
@@ -39,8 +38,8 @@ function compactMoney(value: number): string {
 }
 
 function niceStep(span: number): number {
-  const rough = span / 4;
-  const magnitude = 10 ** Math.floor(Math.log10(rough));
+  const rough = span / 4 || 1;
+  const magnitude = 10 ** Math.floor(Math.log10(Math.abs(rough)));
   const error = rough / magnitude;
   if (error >= 7.5) return 10 * magnitude;
   if (error >= 3.5) return 5 * magnitude;
@@ -48,8 +47,40 @@ function niceStep(span: number): number {
   return magnitude;
 }
 
-export function CashChart({ series, band, marker, ariaLabel }: CashChartProps) {
+function smooth(points: { x: number; y: number }[]): string {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+  let path = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const p0 = points[Math.max(index - 1, 0)];
+    const p1 = points[index];
+    const p2 = points[index + 1];
+    const p3 = points[Math.min(index + 2, points.length - 1)];
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    path += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+  return path;
+}
+
+function sampleIndexes(count: number, dots: number): number[] {
+  if (count <= dots) return Array.from({ length: count }, (_, index) => index);
+  const indexes = new Set<number>([0, count - 1]);
+  for (let step = 1; step < dots - 1; step += 1) {
+    indexes.add(Math.round((step * (count - 1)) / (dots - 1)));
+  }
+  return [...indexes].sort((a, b) => a - b);
+}
+
+export function CashChart({ series, band, marker, ariaLabel, compact = false }: CashChartProps) {
+  const gradientId = useId().replace(/:/g, "");
   const [hover, setHover] = useState<string | null>(null);
+  const width = compact ? 640 : 920;
+  const height = compact ? 230 : 420;
+  const signature = series.map((line) => `${line.id}:${line.points.at(-1)?.value ?? 0}:${line.points.length}`).join("|");
+
   const model = useMemo(() => {
     const dates = new Set<string>();
     for (const line of series) for (const point of line.points) dates.add(point.date);
@@ -59,9 +90,7 @@ export function CashChart({ series, band, marker, ariaLabel }: CashChartProps) {
     }
     const axis = [...dates].sort();
     const values = series.flatMap((line) => line.points.map((point) => point.value));
-    if (band) {
-      values.push(...band.low.map((point) => point.value), ...band.high.map((point) => point.value));
-    }
+    if (band) values.push(...band.low.map((point) => point.value), ...band.high.map((point) => point.value));
     let yMin = Math.min(...values);
     let yMax = Math.max(...values);
     if (!Number.isFinite(yMin) || !Number.isFinite(yMax)) {
@@ -72,13 +101,13 @@ export function CashChart({ series, band, marker, ariaLabel }: CashChartProps) {
       yMin -= 1;
       yMax += 1;
     }
-    const pad = (yMax - yMin) * 0.08;
+    const pad = (yMax - yMin) * 0.12;
     yMin -= pad;
     yMax += pad;
-    const x0 = parseDay(axis[0]);
-    const x1 = parseDay(axis[axis.length - 1]);
-    const plotW = WIDTH - PAD.l - PAD.r;
-    const plotH = HEIGHT - PAD.t - PAD.b;
+    const x0 = parseDay(axis[0] ?? "2026-01-01");
+    const x1 = parseDay(axis[axis.length - 1] ?? "2026-01-02");
+    const plotW = width - PAD.l - PAD.r;
+    const plotH = height - PAD.t - PAD.b;
     const xOf = (date: string) => PAD.l + ((parseDay(date) - x0) / Math.max(x1 - x0, 1)) * plotW;
     const yOf = (value: number) => PAD.t + ((yMax - value) / (yMax - yMin)) * plotH;
     const step = niceStep(yMax - yMin);
@@ -86,15 +115,23 @@ export function CashChart({ series, band, marker, ariaLabel }: CashChartProps) {
     for (let tick = Math.ceil(yMin / step) * step; tick <= yMax + step * 0.01; tick += step) {
       ticks.push(Number(tick.toFixed(6)));
     }
-    const xLabels = axis.filter((date, index) => date.endsWith("-01") || index === 0);
-    return { axis, yMin, yMax, xOf, yOf, ticks, xLabels };
-  }, [series, band]);
+    const xLabels = compact
+      ? axis.filter((_, index) => index === 0 || index === axis.length - 1 || index === Math.floor(axis.length / 2))
+      : axis.filter((date, index) => date.endsWith("-01") || index === 0);
+    const coords = (points: ChartPoint[]) => points.map((point) => ({ x: xOf(point.date), y: yOf(point.value), ...point }));
+    return { axis, yMin, yMax, xOf, yOf, ticks, xLabels, coords };
+  }, [series, band, compact, width, height]);
 
-  const active = hover && model.axis.includes(hover) ? hover : marker?.date && model.axis.includes(marker.date) ? marker.date : model.axis[model.axis.length - 1];
+  const active =
+    hover && model.axis.includes(hover)
+      ? hover
+      : marker?.date && model.axis.includes(marker.date)
+        ? marker.date
+        : model.axis[Math.min(model.axis.length - 1, Math.floor(model.axis.length * 0.35))] ?? model.axis[0];
 
   function move(event: PointerEvent<SVGSVGElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
-    const scale = WIDTH / rect.width;
+    const scale = width / rect.width;
     const x = (event.clientX - rect.left) * scale;
     let nearest = model.axis[0];
     let best = Number.POSITIVE_INFINITY;
@@ -108,94 +145,92 @@ export function CashChart({ series, band, marker, ariaLabel }: CashChartProps) {
     setHover(nearest);
   }
 
-  function pathFor(points: ChartPoint[]): string {
-    return points
-      .map((point, index) => `${index === 0 ? "M" : "L"}${model.xOf(point.date).toFixed(1)},${model.yOf(point.value).toFixed(1)}`)
-      .join(" ");
-  }
+  const primary = series.find((line) => !line.dash) ?? series[0];
+  const primaryCoords = primary ? model.coords(primary.points) : [];
+  const floor = height - PAD.b;
+  const area = primaryCoords.length
+    ? `${smooth(primaryCoords)} L ${primaryCoords[primaryCoords.length - 1].x.toFixed(1)} ${floor} L ${primaryCoords[0].x.toFixed(1)} ${floor} Z`
+    : "";
+  const zeroY = model.yMin < 0 && model.yMax > 0 ? model.yOf(0) : null;
+  const dots = sampleIndexes(primaryCoords.length, compact ? 6 : 8);
 
   let bandPath = "";
   if (band && band.high.length > 1 && band.low.length === band.high.length) {
-    const forward = band.high
-      .map((point, index) => `${index === 0 ? "M" : "L"}${model.xOf(point.date).toFixed(1)},${model.yOf(point.value).toFixed(1)}`)
-      .join(" ");
-    const back = [...band.low]
-      .reverse()
-      .map((point) => `L${model.xOf(point.date).toFixed(1)},${model.yOf(point.value).toFixed(1)}`)
-      .join(" ");
-    bandPath = `${forward} ${back} Z`;
+    const high = model.coords(band.high);
+    const low = model.coords(band.low);
+    bandPath = `${smooth(high)} L ${[...low].reverse().map((point) => `${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" L ")} Z`;
   }
 
-  const zeroY = model.yMin < 0 && model.yMax > 0 ? model.yOf(0) : null;
-
   return (
-    <figure className="chart">
+    <figure className={compact ? "chart compact" : "chart"}>
       <svg
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        viewBox={`0 0 ${width} ${height}`}
         role="img"
         aria-label={ariaLabel}
         onPointerMove={move}
         onPointerLeave={() => setHover(null)}
       >
+        <defs>
+          <linearGradient id={`${gradientId}-fill`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={primary?.color ?? "#22d3ee"} stopOpacity="0.45" />
+            <stop offset="70%" stopColor={primary?.color ?? "#22d3ee"} stopOpacity="0.08" />
+            <stop offset="100%" stopColor={primary?.color ?? "#22d3ee"} stopOpacity="0" />
+          </linearGradient>
+          <filter id={`${gradientId}-glow`} x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2.2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
         {model.ticks.map((tick) => (
           <g key={tick}>
-            <line
-              x1={PAD.l}
-              x2={WIDTH - PAD.r}
-              y1={model.yOf(tick)}
-              y2={model.yOf(tick)}
-              className="grid"
-            />
+            <line x1={PAD.l} x2={width - PAD.r} y1={model.yOf(tick)} y2={model.yOf(tick)} className="grid" />
             <text x={PAD.l - 8} y={model.yOf(tick) + 4} className="tick" textAnchor="end">
               {compactMoney(tick)}
             </text>
           </g>
         ))}
         {model.xLabels.map((date) => (
-          <text key={date} x={model.xOf(date)} y={HEIGHT - 12} className="tick" textAnchor="middle">
+          <text key={date} x={model.xOf(date)} y={height - 10} className="tick" textAnchor="middle">
             {monthDayLabel(date).replace(/, \d{4}$/, "")}
           </text>
         ))}
-        {zeroY !== null ? (
-          <line x1={PAD.l} x2={WIDTH - PAD.r} y1={zeroY} y2={zeroY} className="zero" />
-        ) : null}
-        {bandPath ? <path d={bandPath} fill={band?.color} className="band-path" /> : null}
-        {series.map((line) => (
-          <path
-            key={line.id}
-            d={pathFor(line.points)}
-            className={line.dash ? "series-dashed" : "series-line"}
-            fill="none"
-            stroke={line.color}
-            strokeWidth={line.width ?? 2.25}
-            pathLength={line.dash ? undefined : 1}
-            strokeDasharray={line.dash ? "7 5" : undefined}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-        ))}
-        {marker && model.axis.includes(marker.date) ? (
-          <g>
-            <line
-              x1={model.xOf(marker.date)}
-              x2={model.xOf(marker.date)}
-              y1={PAD.t}
-              y2={HEIGHT - PAD.b}
-              className="marker"
+        {zeroY !== null ? <line x1={PAD.l} x2={width - PAD.r} y1={zeroY} y2={zeroY} className="zero" /> : null}
+        <g key={signature}>
+          {bandPath ? <path d={bandPath} fill={band?.color} className="band-path" /> : null}
+          {area ? <path d={area} fill={`url(#${gradientId}-fill)`} className="area-path" /> : null}
+          {series.map((line) => (
+            <path
+              key={line.id}
+              d={smooth(model.coords(line.points))}
+              className={line.dash ? "series-dashed" : "series-line"}
+              fill="none"
+              stroke={line.color}
+              strokeWidth={line.width ?? (compact ? 2.4 : 2.8)}
+              pathLength={line.dash ? undefined : 1}
+              strokeDasharray={line.dash ? "6 5" : undefined}
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              filter={line.dash ? undefined : `url(#${gradientId}-glow)`}
             />
-            <text x={model.xOf(marker.date) - 6} y={PAD.t + 12} className="marker-label" textAnchor="end">
-              {marker.label}
-            </text>
-          </g>
-        ) : null}
+          ))}
+          {primaryCoords.length
+            ? dots.map((index) => {
+                const point = primaryCoords[index];
+                const hot = point.date === active || point.date === marker?.date;
+                return (
+                  <g key={point.date} className="node">
+                    <circle cx={point.x} cy={point.y} r={hot ? 9 : 6} fill={primary?.color} opacity={hot ? 0.35 : 0.22} className="node-halo" />
+                    <circle cx={point.x} cy={point.y} r={hot ? 4.2 : 3.1} fill="#f8fbff" stroke={primary?.color} strokeWidth="2" />
+                  </g>
+                );
+              })
+            : null}
+        </g>
         {active ? (
-          <line
-            x1={model.xOf(active)}
-            x2={model.xOf(active)}
-            y1={PAD.t}
-            y2={HEIGHT - PAD.b}
-            className="hover-line"
-          />
+          <line x1={model.xOf(active)} x2={model.xOf(active)} y1={PAD.t} y2={height - PAD.b} className="hover-line" />
         ) : null}
       </svg>
       <div className="legend">

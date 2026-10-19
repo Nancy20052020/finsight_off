@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 
 import { Dashboard } from "@/components/Dashboard";
@@ -57,12 +56,6 @@ export function TryApp({ sample }: { sample: Books }) {
 
   return (
     <div>
-      <div className="nav-wrap">
-        <nav className="nav">
-          <Link href="/">FinSight</Link>
-          <span className="nav-meta">{fileLabel}</span>
-        </nav>
-      </div>
       <section className="try-panel">
         <div>
           <h1>Try it on a statement</h1>
