@@ -4,17 +4,19 @@ import { useState } from "react";
 
 import { Dashboard } from "@/components/Dashboard";
 import { booksFromBankExport, invoicesFromCsv } from "@/lib/bank";
+import { LanguageSwitch, useI18n } from "@/lib/i18n";
 import type { Books } from "@/lib/types";
 
 export function TryApp({ sample }: { sample: Books }) {
+  const { t } = useI18n();
   const [books, setBooks] = useState<Books>(sample);
   const [usingSample, setUsingSample] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [fileLabel, setFileLabel] = useState("Harbor & Co. sample books");
+  const [fileLabel, setFileLabel] = useState("sample-bank.csv");
 
   async function loadBank(file: File) {
     if (!/\.csv$|\.tsv$|\.txt$/i.test(file.name)) {
-      setError("Upload a CSV export. PDF statements are not read.");
+      setError(t("pdfError"));
       return;
     }
     try {
@@ -24,13 +26,13 @@ export function TryApp({ sample }: { sample: Books }) {
       setFileLabel(file.name);
       setError(null);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not read that file.");
+      setError(reason instanceof Error ? reason.message : t("readError"));
     }
   }
 
   async function loadInvoices(file: File) {
     if (!/\.csv$|\.tsv$|\.txt$/i.test(file.name)) {
-      setError("Upload invoices as CSV.");
+      setError(t("pdfError"));
       return;
     }
     try {
@@ -50,19 +52,48 @@ export function TryApp({ sample }: { sample: Books }) {
       setUsingSample(false);
       setError(null);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Could not read invoices.");
+      setError(reason instanceof Error ? reason.message : t("readError"));
+    }
+  }
+
+  async function loadSampleCsv() {
+    try {
+      const [bankText, invoiceText] = await Promise.all([
+        fetch("/sample-bank.csv").then((response) => response.text()),
+        fetch("/sample-invoices.csv").then((response) => response.text()),
+      ]);
+      const next = booksFromBankExport(bankText, "Harbor and Co.csv");
+      const invoices = invoicesFromCsv(invoiceText);
+      const open = invoices.find((invoice) => !invoice.paid_date);
+      setBooks({
+        ...next,
+        invoices,
+        meta: {
+          ...next.meta,
+          company: "Harbor & Co.",
+          hero_invoice_id: open?.invoice_id ?? invoices[0]?.invoice_id ?? "",
+          hero_customer: open?.customer ?? invoices[0]?.customer ?? "",
+        },
+      });
+      setUsingSample(false);
+      setFileLabel("sample-bank.csv");
+      setError(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t("readError"));
     }
   }
 
   return (
     <div>
       <section className="try-panel">
-        <div>
-          <h1>Try it on a statement</h1>
-          <p>
-            Drop a bank CSV. Date and amount are enough. Debit and credit columns work too. An
-            invoice CSV is optional. Files stay in this browser and are not uploaded to a server.
-          </p>
+        <div className="try-head">
+          <div>
+            <h1>{t("tryTitle")}</h1>
+            <p>{t("tryBody")}</p>
+          </div>
+          <div className="try-tools">
+            <LanguageSwitch />
+          </div>
         </div>
         <div className="drops">
           <label
@@ -74,7 +105,7 @@ export function TryApp({ sample }: { sample: Books }) {
               if (file) void loadBank(file);
             }}
           >
-            Bank CSV
+            {t("bankCsv")}
             <input
               type="file"
               accept=".csv,.tsv,.txt,text/csv"
@@ -85,7 +116,7 @@ export function TryApp({ sample }: { sample: Books }) {
             />
           </label>
           <label className="drop">
-            Invoices CSV, optional
+            {t("invoiceCsv")}
             <input
               type="file"
               accept=".csv,.tsv,.txt,text/csv"
@@ -95,18 +126,29 @@ export function TryApp({ sample }: { sample: Books }) {
               }}
             />
           </label>
+        </div>
+        <div className="file-actions">
+          <button type="button" className="button" onClick={() => void loadSampleCsv()}>
+            {t("loadCsv")}
+          </button>
           <button
             type="button"
             className="button ghost"
             onClick={() => {
               setBooks(sample);
               setUsingSample(true);
-              setFileLabel("Harbor & Co. sample books");
+              setFileLabel("sample-bank.csv");
               setError(null);
             }}
           >
-            Use sample books
+            {t("useSample")}
           </button>
+          <a className="button ghost" href="/sample-bank.csv" download>
+            {t("downloadBank")}
+          </a>
+          <a className="button ghost" href="/sample-invoices.csv" download>
+            {t("downloadInvoices")}
+          </a>
         </div>
         {error ? <p className="banner warn">{error}</p> : null}
       </section>
@@ -115,8 +157,8 @@ export function TryApp({ sample }: { sample: Books }) {
         books={books}
         note={
           usingSample
-            ? `${books.meta.company} · synthetic books · no chatbot. Scenario results are calculations under the stated assumptions.`
-            : `${books.meta.company} · read from ${fileLabel} in this browser. Nothing was stored. Scenarios are calculations, not guarantees.`
+            ? t("footerSample", { company: books.meta.company })
+            : t("footerUpload", { company: books.meta.company, file: fileLabel })
         }
       />
     </div>

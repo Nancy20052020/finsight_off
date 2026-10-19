@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, Outfit } from "next/font/google";
 
+import { I18nProvider } from "@/lib/i18n";
 import { ThemeProvider } from "@/components/Theme";
 import "./globals.css";
 
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
     "Schedule-aware cash forecast for a small business. Upload a bank CSV, see the shortfall, and move one assumption.",
 };
 
-const themeBoot = `(function(){try{var t=localStorage.getItem("finsight-theme");document.documentElement.dataset.theme=t==="light"?"light":"dark";}catch(e){document.documentElement.dataset.theme="dark";}})();`;
+const themeBoot = `(function(){try{var t=localStorage.getItem("finsight-theme");document.documentElement.dataset.theme=t==="dark"?"dark":"light";}catch(e){document.documentElement.dataset.theme="light";}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -31,7 +32,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
       </head>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <I18nProvider>{children}</I18nProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
