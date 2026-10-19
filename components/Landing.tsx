@@ -69,9 +69,9 @@ export function Landing({
               <Link href="/try" className="button">
                 {t("try")}
               </Link>
-              <a href="#preview" className="button ghost light">
+              <Link href="/demo" className="button ghost light">
                 {t("seeSample")}
-              </a>
+              </Link>
             </div>
           </div>
           <article className="product-card">
@@ -157,7 +157,7 @@ export function Landing({
             <p className="eyebrow">{t("sampleKicker")}</p>
             <h2>{t("sampleTitle")}</h2>
           </div>
-          <Link href="/try" className="button">
+          <Link href="/demo" className="button">
             {t("openWorkspace")}
           </Link>
         </div>

@@ -22,7 +22,15 @@ import type { Books, ForecastResult, Story } from "@/lib/types";
 
 const EXPENSE_CHOICES = ["marketing", "contractor", "software"] as const;
 
-export function Dashboard({ books, note }: { books: Books; note?: string }) {
+export function Dashboard({
+  books,
+  note,
+  onChangeFiles,
+}: {
+  books: Books;
+  note?: string;
+  onChangeFiles?: () => void;
+}) {
   const { t, cat } = useI18n();
   const { theme } = useTheme();
   const dark = theme === "dark";
@@ -202,6 +210,15 @@ export function Dashboard({ books, note }: { books: Books; note?: string }) {
         </nav>
         <LanguageSwitch />
         <ThemeToggle />
+        {onChangeFiles ? (
+          <button type="button" className="button ghost rail-action" onClick={onChangeFiles}>
+            {t("changeFiles")}
+          </button>
+        ) : (
+          <Link href="/try" className="button rail-action">
+            {t("try")}
+          </Link>
+        )}
       </aside>
       <div className="shell-main">
         <div className="page">
