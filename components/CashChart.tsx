@@ -159,14 +159,16 @@ export function CashChart({ series, band, marker, ariaLabel }: CashChartProps) {
         {zeroY !== null ? (
           <line x1={PAD.l} x2={WIDTH - PAD.r} y1={zeroY} y2={zeroY} className="zero" />
         ) : null}
-        {bandPath ? <path d={bandPath} fill={band?.color} /> : null}
+        {bandPath ? <path d={bandPath} fill={band?.color} className="band-path" /> : null}
         {series.map((line) => (
           <path
             key={line.id}
             d={pathFor(line.points)}
+            className={line.dash ? "series-dashed" : "series-line"}
             fill="none"
             stroke={line.color}
             strokeWidth={line.width ?? 2.25}
+            pathLength={line.dash ? undefined : 1}
             strokeDasharray={line.dash ? "7 5" : undefined}
             strokeLinejoin="round"
             strokeLinecap="round"

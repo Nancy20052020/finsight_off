@@ -16,9 +16,9 @@ const serif = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "FinSight AI",
+  title: "FinSight",
   description:
-    "Schedule-aware cash forecast for Harbor & Co. Synthetic books, calculated scenarios, and a trailing-average baseline.",
+    "Schedule-aware cash forecast for a small business. Upload a bank CSV, see the shortfall date, and move one assumption.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

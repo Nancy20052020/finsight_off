@@ -19,7 +19,7 @@ import type { Books } from "@/lib/types";
 
 const EXPENSE_CHOICES = ["marketing", "contractor", "software"] as const;
 
-export function Dashboard({ books }: { books: Books }) {
+export function Dashboard({ books, note }: { books: Books; note?: string }) {
   const { meta, transactions, invoices } = books;
   const asOf = meta.as_of;
   const open = useMemo(() => openInvoices(invoices, asOf), [invoices, asOf]);
@@ -44,10 +44,14 @@ export function Dashboard({ books }: { books: Books }) {
     () => positionStats(transactions, invoices, asOf),
     [transactions, invoices, asOf],
   );
-  const metrics = useMemo(
-    () => evaluate(transactions, invoices, meta.opening_cash, meta.history_start, asOf),
-    [transactions, invoices, meta.opening_cash, meta.history_start, asOf],
-  );
+  const metrics = useMemo(() => {
+    try {
+      const scored = evaluate(transactions, invoices, meta.opening_cash, meta.history_start, asOf);
+      return Number.isFinite(scored.modelMae) ? scored : null;
+    } catch {
+      return null;
+    }
+  }, [transactions, invoices, meta.opening_cash, meta.history_start, asOf]);
   const history = useMemo(() => {
     const series = dailyBalance(transactions, meta.opening_cash, meta.history_start, asOf);
     const start = addDays(asOf, -90);
@@ -119,9 +123,11 @@ export function Dashboard({ books }: { books: Books }) {
   }
 
   const modelLead =
-    metrics.modelLeadDays === null ? "did not flag it" : `flagged it ${metrics.modelLeadDays} days ahead`;
+    !metrics || metrics.modelLeadDays === null
+      ? "did not flag it"
+      : `flagged it ${metrics.modelLeadDays} days ahead`;
   const baselineLead =
-    metrics.baselineLeadDays === null
+    !metrics || metrics.baselineLeadDays === null
       ? "did not flag it"
       : `flagged it ${metrics.baselineLeadDays} days ahead`;
 
@@ -325,6 +331,14 @@ export function Dashboard({ books }: { books: Books }) {
 
       <section>
         <h2>Evaluation</h2>
+        {metrics ? null : (
+          <p className="banner info">
+            This history is too short for a holdout score. The forecast above still uses every row
+            in the file.
+          </p>
+        )}
+        {metrics ? (
+          <>
         <p className="caption">
           Weekly origins in the 60 days before the as-of date each forecast the next 21 days. Error
           is the mean absolute difference from the actual daily cash balance. Lead time is how far
@@ -360,12 +374,14 @@ export function Dashboard({ books }: { books: Books }) {
         ) : (
           <p>Cash did not close below zero during the holdout, so lead time is not defined.</p>
         )}
+          </>
+        ) : null}
       </section>
 
       <footer>
         <p>
-          {meta.company} · synthetic books · no chatbot. Scenario results are calculations under the
-          stated assumptions.
+          {note ??
+            `${meta.company} · synthetic books · no chatbot. Scenario results are calculations under the stated assumptions.`}
         </p>
       </footer>
     </div>

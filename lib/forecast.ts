@@ -194,6 +194,11 @@ function fitVariable(dates: string[], values: number[]): {
   intercept: number;
   residualStd: number;
 } {
+  if (values.length < 8) {
+    const recent = values.slice(-7);
+    const average = recent.reduce((sum, value) => sum + value, 0) / Math.max(recent.length, 1);
+    return { coef: Array(9).fill(0), intercept: average, residualStd: 0 };
+  }
   const rows: number[][] = [];
   const targets: number[] = [];
   for (let index = 7; index < values.length; index += 1) {
