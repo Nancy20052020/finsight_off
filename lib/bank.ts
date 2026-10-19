@@ -175,6 +175,22 @@ export function booksFromBankExport(text: string, filename: string): Books {
   };
 }
 
+export function booksFromPair(bankText: string, bankName: string, invoiceText: string, company?: string): Books {
+  const next = booksFromBankExport(bankText, bankName);
+  const invoices = invoicesFromCsv(invoiceText);
+  const open = invoices.find((invoice) => !invoice.paid_date);
+  return {
+    ...next,
+    invoices,
+    meta: {
+      ...next.meta,
+      company: company ?? next.meta.company,
+      hero_invoice_id: open?.invoice_id ?? invoices[0]?.invoice_id ?? "",
+      hero_customer: open?.customer ?? invoices[0]?.customer ?? "",
+    },
+  };
+}
+
 export function invoicesFromCsv(text: string): Invoice[] {
   const table = parseCsv(text);
   if (table.length < 2) throw new Error("The invoice file needs a header and at least one row.");
