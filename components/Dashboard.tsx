@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { CashChart } from "@/components/CashChart";
+import { ThemeToggle } from "@/components/Theme";
 import { addDays, monthDayLabel } from "@/lib/dates";
 import { evaluate } from "@/lib/evaluate";
 import { explain } from "@/lib/explain";
@@ -131,7 +133,25 @@ export function Dashboard({ books, note }: { books: Books; note?: string }) {
       ? "did not flag it"
       : `flagged it ${metrics.baselineLeadDays} days ahead`;
 
+  const scenarioShift = scenarioMin30 - story.min30;
+
   return (
+    <div className="shell">
+      <aside className="rail">
+        <Link href="/" className="brand">
+          <span className="mark">F</span>
+          FinSight
+        </Link>
+        <nav>
+          <a href="#position">Position</a>
+          <a href="#forecast">Forecast</a>
+          <a href="#why">Why</a>
+          <a href="#scenario">What-if</a>
+          <a href="#score">Evaluation</a>
+        </nav>
+        <ThemeToggle />
+      </aside>
+      <div className="shell-main">
     <div className="page">
       <header className="top">
         <div>
@@ -150,7 +170,7 @@ export function Dashboard({ books, note }: { books: Books; note?: string }) {
         </p>
       </header>
 
-      <section>
+      <section id="position">
         <h2>Position</h2>
         <div className="metrics">
           <Metric label="Cash today" value={money(base.cashToday)} />
@@ -176,19 +196,19 @@ export function Dashboard({ books, note }: { books: Books; note?: string }) {
         ))}
       </section>
 
-      <section>
+      <section id="forecast">
         <h2>Forecast</h2>
         <CashChart
           ariaLabel={`Cash history and 90-day forecast. The schedule-aware path crosses zero on ${base.shortfallDate ?? "no date in the horizon"}.`}
-          band={{ name: "10th–90th percentile", color: "rgba(37, 99, 235, 0.16)", low: lowPoints, high: highPoints }}
+          band={{ name: "10th–90th percentile", color: "rgba(34, 211, 238, 0.18)", low: lowPoints, high: highPoints }}
           marker={base.shortfallDate ? { date: base.shortfallDate, label: "Shortfall" } : null}
           series={[
-            { id: "history", name: "History", color: "#334155", points: history },
-            { id: "model", name: "Schedule-aware", color: "#2563eb", width: 2.75, points: basePoints },
+            { id: "history", name: "History", color: "#94a3b8", points: history },
+            { id: "model", name: "Schedule-aware", color: "#22d3ee", width: 3, points: basePoints },
             {
               id: "baseline",
               name: "Trailing-average baseline",
-              color: "#b45309",
+              color: "#f59e0b",
               dash: true,
               points: baselinePoints,
             },
@@ -201,7 +221,7 @@ export function Dashboard({ books, note }: { books: Books; note?: string }) {
         </p>
       </section>
 
-      <section>
+      <section id="why">
         <h2>Why</h2>
         <div className="split">
           <div className="panel">
@@ -236,7 +256,7 @@ export function Dashboard({ books, note }: { books: Books; note?: string }) {
         </details>
       </section>
 
-      <section>
+      <section id="scenario">
         <h2>What-if</h2>
         <p className="caption">
           Change one collection date or reduce one expense. The chart uses the same cash engine as
@@ -318,8 +338,8 @@ export function Dashboard({ books, note }: { books: Books; note?: string }) {
         <CashChart
           ariaLabel="Base forecast compared with the selected scenario."
           series={[
-            { id: "base", name: "Base", color: "#2563eb", points: basePoints },
-            { id: "scenario", name: "Scenario", color: "#059669", points: scenarioPoints },
+            { id: "base", name: "Base", color: "#22d3ee", points: basePoints },
+            { id: "scenario", name: "Scenario", color: "#34d399", points: scenarioPoints },
           ]}
         />
         <ul className="bullets">
@@ -329,7 +349,7 @@ export function Dashboard({ books, note }: { books: Books; note?: string }) {
         </ul>
       </section>
 
-      <section>
+      <section id="score">
         <h2>Evaluation</h2>
         {metrics ? null : (
           <p className="banner info">
@@ -384,6 +404,34 @@ export function Dashboard({ books, note }: { books: Books; note?: string }) {
             `${meta.company} · synthetic books · no chatbot. Scenario results are calculations under the stated assumptions.`}
         </p>
       </footer>
+    </div>
+      </div>
+      <aside className="insight">
+        <p className="eyebrow">Live path</p>
+        <h2>{Math.abs(scenarioShift) > 1 || reduction > 0 ? "Scenario" : "Base"}</h2>
+        <CashChart
+          compact
+          ariaLabel="Side panel cash path that updates with the scenario controls."
+          marker={scenario.shortfallDate ? { date: scenario.shortfallDate, label: "Shortfall" } : null}
+          series={[
+            { id: "base", name: "Base", color: "#22d3ee", points: basePoints },
+            { id: "scenario", name: "Scenario", color: "#34d399", points: scenarioPoints },
+          ]}
+        />
+        <div className="metrics" style={{ gridTemplateColumns: "1fr", marginTop: 12 }}>
+          <article className="metric">
+            <h3>Shortfall</h3>
+            <p>{scenario.shortfallDate ?? "None in 90 days"}</p>
+          </article>
+          <article className={`metric ${scenarioShift > 0 ? "good" : scenarioShift < 0 ? "bad" : ""}`}>
+            <h3>30-day low vs base</h3>
+            <p>{signedMoney(scenarioShift)}</p>
+          </article>
+        </div>
+        <p className="insight-note">
+          Move a collection date or a marketing cut. This panel redraws from the same cash engine.
+        </p>
+      </aside>
     </div>
   );
 }
